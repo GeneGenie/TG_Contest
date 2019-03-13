@@ -1,7 +1,8 @@
-import Line from './Line.js'
+import Line from "./Line.js";
 class SeriesContainer {
     constructor(opts) {
         this.rect = opts.rect;
+        this.visibleRect = opts.visibleRect || this.rect;
         // opts.series;
         this.drawn = false;
 
@@ -31,7 +32,7 @@ class SeriesContainer {
         return values.map((value, i)=> {
             let newY = Math.abs(((value - yMin) / (yMax - yMin)) * rect.height - rect.height) + rect.y;
             return [
-                i * xStep,
+                i * xStep + rect.x,
                 newY
             ]
         })

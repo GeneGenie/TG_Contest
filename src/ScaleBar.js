@@ -6,7 +6,7 @@ class ScaleBar {
         this.range = opts.range;
         this.onRangeChange = opts.onRangeChange || function () {
             }
-        this.pixelPerPercent = this.rect.width / 100;
+        this.pixelPerPercent =opts.pixelPerPercent ||  this.rect.width / 100;
     }
 
     update() {
@@ -14,7 +14,7 @@ class ScaleBar {
         const range = this.range;
         const rectWidthPX = ((range.end - range.start) / 100) * rect.width;
 
-        this.drawingRect = [
+        this.visibleRect = [
             rect.x + this.pixelPerPercent * range.start,
             rect.y,
             rectWidthPX,
@@ -30,9 +30,11 @@ class ScaleBar {
     draw(ctx) {
         const r = this.rect;
         ctx.fillStyle = this.bg;
-        ctx.fillRect(r.x, r.y, r.width, r.height)
+        //ctx.fillRect(r.x, r.y, r.width, r.height)
 
-        ctx.fillRect.apply(ctx, this.drawingRect)
+        ctx.fillRect.apply(ctx, this.visibleRect);
+
+
         this.drawn = true;
     }
 

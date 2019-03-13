@@ -6,7 +6,7 @@ class Graph {
     constructor(opts) {
         var canvas = opts.el;
         this.series = opts.series;
-        this.xRangePercent = opts.defaultXRangePercent || {start:50,end:100};
+        this.xRangePercent = opts.defaultXRangePercent || {start: 20, end: 50};
         this.sceneObjects = [];
         if (canvas) {
             this.width = parseInt(canvas.width);
@@ -20,18 +20,19 @@ class Graph {
         }
         console.log(this.countXRange())
         this.ctx = canvas.getContext("2d");
-        //this.ctx.translate(0.1, 0.5);
         this.setupScene();
         this.addSceneObjects({series: this.series});
     }
-    countXRange(){
-        let columnsTotal = this.series[0].values.length-1;
+
+    countXRange() {
+        let columnsTotal = this.series[0].values.length - 1;
         return {
-            startI:Math.round((this.xRangePercent.start/100) * columnsTotal),
-            endI:Math.round((this.xRangePercent.end/100) * columnsTotal)
+            startI: Math.round((this.xRangePercent.start / 100) * columnsTotal),
+            endI: Math.round((this.xRangePercent.end / 100) * columnsTotal)
         }
 
     }
+
     setupScene() {
         var self = this;
         var nextFrameHandler = window.requestAnimationFrame ||
@@ -56,10 +57,6 @@ class Graph {
             nextFrameHandler(renderer);
         }
 
-        // this.ctx.fillStyle = 'grey';
-        // this.ctx.fillRect(0,0,1000,1000);
-        //todo remove
-
         nextFrameHandler(renderer);
     }
 
@@ -83,27 +80,37 @@ class Graph {
     }
 
     addSceneObjects({series}) {
-
-        let yAxisData = this.calcYAxis({serieValues: series.map(s=>s.values), steps: 6});
         const paddingTopBot = 10;
         const ScaleBarHeight = 80;
+        const yAxisData = this.calcYAxis({serieValues: series.map(s=>s.values), steps: 6});
 
-        let chartRect = {
+        let mainRect = {
             x: 0,
             y: paddingTopBot,
             width: this.width,
             height: this.height - ScaleBarHeight - paddingTopBot * 2,
         };
-
-
         let yAxis = new YAxisScene({
-            rect: chartRect,
+            rect: mainRect,
             data: yAxisData,
             orientation: 'left', //todo
         });
+
+
+        //it was a hard decision to make full points render with scale, but also the easiest one, with inView points optimization
+        const scaleFactor  = 1/((this.xRangePercent.end - this.xRangePercent.start )/100);
+        const pixelPerPercent =  this.width / 100;
+        let seriesRect = {
+            x: pixelPerPercent * this.xRangePercent.start *scaleFactor * -1,
+            y: mainRect.y,
+            width: this.width*scaleFactor,
+            height: mainRect.height,
+        };
+
         let scMain = new SeriesContainer({
             yAxisData,
-            rect: chartRect,
+            rect: seriesRect,
+            visibleRect: mainRect,
             series
         });
 
@@ -120,7 +127,8 @@ class Graph {
         let sb = new ScaleBar({
             bg: 'rgba(225,225,225,0.5)',
             rect: scaleBarRect,
-            range:this.xRangePercent
+            range: this.xRangePercent,
+            pixelPerPercent
         });
 
 

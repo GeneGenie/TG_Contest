@@ -18,20 +18,20 @@ class Graph {
             canvas.height = this.height = opts.height;
             document.body.appendChild(canvas);
         }
-        console.log(this.countXRange())
         this.ctx = canvas.getContext("2d");
         this.setupScene();
         this.addSceneObjects({series: this.series});
     }
 
-    countXRange() {
-        let columnsTotal = this.series[0].values.length - 1;
-        return {
-            startI: Math.round((this.xRangePercent.start / 100) * columnsTotal),
-            endI: Math.round((this.xRangePercent.end / 100) * columnsTotal)
-        }
-
-    }
+    // countXRange() {
+    ////may be good for more optimal points generation to pass only visible columns
+    //     let columnsTotal = this.series[0].values.length - 1;
+    //     return {
+    //         startI: Math.round((this.xRangePercent.start / 100) * columnsTotal),
+    //         endI: Math.round((this.xRangePercent.end / 100) * columnsTotal)
+    //     }
+    //
+    // }
 
     setupScene() {
         var self = this;

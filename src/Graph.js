@@ -2,12 +2,14 @@ import YAxisScene from "./yAxis.js";
 import ScaleBar from "./ScaleBar.js";
 import SeriesContainer from "./SeriesContainer.js";
 
+
 class Graph {
     constructor(opts) {
         var canvas = opts.el;
         this.series = opts.series;
+        this.drawables = {};
         this.xRangePercent = opts.defaultXRangePercent || {start: 20, end: 50};
-        this.sceneObjects = [];
+        this.sceneObjectGroups = [];
         if (canvas) {
             this.width = parseInt(canvas.width);
             this.height = parseInt(canvas.height);
@@ -32,7 +34,7 @@ class Graph {
 
         function renderer(tfDiff) {
             // self.ctx.clearRect(0, 0, self.width, self.height);
-            self.sceneObjects.forEach(group=> {
+            self.sceneObjectGroups.forEach(group=> {
                 let anyUpdates = false;
                 group.forEach(obj=> {
                     obj.updating(tfDiff) && (anyUpdates = true);
@@ -69,52 +71,50 @@ class Graph {
         return result;
     }
 
+    updateRange(newRange) {
+        this.xRangePercent = newRange;
+    }
+
     addSceneObjects({series}) {
         const paddingTopBot = 10;
         const ScaleBarHeight = 80;
         const yAxisData = this.calcYAxis({serieValues: series.map(s=>s.values), steps: 6});
-
+        const scaleFactor = 1 / ((this.xRangePercent.end - this.xRangePercent.start ) / 100);
+        const pixelPerPercent = this.width / 100;
         let mainRect = {
             x: 0,
             y: paddingTopBot,
             width: this.width,
             height: this.height - ScaleBarHeight - paddingTopBot * 2,
         };
-        let yAxis = new YAxisScene({
+        let seriesRect = {
+            x: pixelPerPercent * this.xRangePercent.start * scaleFactor * -1,
+            y: mainRect.y,
+            width: this.width * scaleFactor,
+            height: mainRect.height,
+        };
+        let scaleBarRect = {
+            x: 0, y: this.height - ScaleBarHeight,
+            width: this.width, height: ScaleBarHeight
+        };
+
+        this.drawables.yAxis = new YAxisScene({
             rect: mainRect,
             data: yAxisData,
             orientation: 'left', //todo
         });
-
-
-        //it was a hard decision to make full points render with scale, but also the easiest one, with inView points optimization
-        const scaleFactor  = 1/((this.xRangePercent.end - this.xRangePercent.start )/100);
-        const pixelPerPercent =  this.width / 100;
-        let seriesRect = {
-            x: pixelPerPercent * this.xRangePercent.start *scaleFactor * -1,
-            y: mainRect.y,
-            width: this.width*scaleFactor,
-            height: mainRect.height,
-        };
-
-        let scMain = new SeriesContainer({
+        this.drawables.scMain = new SeriesContainer({
             yAxisData,
             rect: seriesRect,
             visibleRect: mainRect,
             series
         });
-
-
-        let scaleBarRect = {
-            x: 0, y: this.height - ScaleBarHeight,
-            width: this.width, height: ScaleBarHeight
-        };
-        let scUnderScaleBar = new SeriesContainer({
+        this.drawables.scUnderScaleBar = new SeriesContainer({
             yAxisData,
             rect: scaleBarRect,
             series
         });
-        let sb = new ScaleBar({
+        this.drawables.sb = new ScaleBar({
             bg: 'rgba(225,225,225,0.5)',
             rect: scaleBarRect,
             range: this.xRangePercent,
@@ -122,8 +122,8 @@ class Graph {
         });
 
 
-        this.sceneObjects.push([yAxis, scMain]);
-        this.sceneObjects.push([scUnderScaleBar, sb]);
+        this.sceneObjectGroups.push([this.drawables.yAxis, this.drawables.scMain]);
+        this.sceneObjectGroups.push([this.drawables.scUnderScaleBar, this.drawables.sb]);
 
     }
 

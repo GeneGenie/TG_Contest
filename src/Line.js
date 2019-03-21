@@ -1,4 +1,4 @@
-import Utils from './Utils.js'
+import Utils from "./Utils.js";
 
 const DEFAULT_ANIMATION_DURATION = 300;
 class Line {
@@ -30,9 +30,14 @@ class Line {
     }
 
     animate(opts) {
+        if (this.animating) {
+            //continue current animation during range change, makes it smooth
+            this.animOpts.dir.points = this.animOpts.orig.points.map((point, i)=>Utils.subAA(opts.points[i], point))
+            return this;
+        }
         this.animOpts = {
             orig: {
-                points: this.points
+                points: this.points.map(v=>v)
             },
             dir: {
                 points: this.points.map((point, i)=>Utils.subAA(opts.points[i], point)),
@@ -48,7 +53,6 @@ class Line {
     update(TIME) {
 
         if (!this.animating) return false;
-
         let opts = this.animOpts;
         if (opts.progress == 1) {
             this.animating = false;
@@ -63,8 +67,8 @@ class Line {
         if (opts.progress > 1) {
             opts.progress = 1;
         }
-        this.points = opts.orig.points.map((point, i)=> {
-            return Utils.addAA(point, Utils.multiAV(opts.dir.points[i], opts.progress));
+        this.points = opts.orig.points.map((orpoint, i)=> {
+            return Utils.addAA(orpoint, Utils.multiAV(opts.dir.points[i], opts.progress));
         });
     }
 

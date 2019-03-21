@@ -3,16 +3,15 @@ class SeriesContainer {
     constructor(opts) {
         this.rect = opts.rect;
         this.visibleRect = opts.visibleRect || this.rect;
-        // opts.series;
-        this.drawn = false;
-
+        this.series = opts.series.map(ser => Object.assign({},ser));
+        this.yAxisData = opts.yAxisData
         this.drawables = []
-        opts.series.forEach(ser=> {
+
+        this.series.forEach(ser=> {
             if (ser.type == 'line') {
-                let values = ser.values;
                 let points = this.calculate({
-                    yAxis: opts.yAxisData,
-                    values,
+                    yAxis: this.yAxisData,
+                    values:ser.values,
                     rect: this.rect,
                 });
 
@@ -21,11 +20,24 @@ class SeriesContainer {
                 });
                 let line = new Line({points: initPoints, color: ser.color})
                 line.animate({points});
+                ser.drawableLine = line;
                 this.drawables.push(line);
             }
         })
     }
-
+    updateRange({rect}){
+        this.rect = rect;
+        this.series.forEach(ser=> {
+            if (ser.type == 'line') {
+                let points = this.calculate({
+                    yAxis: this.yAxisData,
+                    values:ser.values,
+                    rect: this.rect,
+                });
+                ser.drawableLine.animate({points});
+            }
+        })
+    }
     calculate({values, rect, yAxis}) {
         let {yMax, yMin} = yAxis;
         let xStep = rect.width / (values.length - 1);

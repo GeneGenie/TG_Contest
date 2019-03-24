@@ -5,7 +5,11 @@ function getData() {
         .then(s=>s.json())
         .then(data=> {
             let CS = new ColorShifter()
-            window.g = Graph.initFromData(data[4]);
+
+
+            data.forEach(dataSet=>{
+                Graph.initFromData(dataSet)
+            })
             //minify webpack
             // tooltips ? fuck
         })

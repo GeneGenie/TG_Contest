@@ -1,16 +1,24 @@
 import YAxisScene from "./yAxis.js";
+import XAxisScene from "./xAxis.js";
 import ScaleBar from "./ScaleBar.js";
 import SeriesContainer from "./SeriesContainer.js";
 
-const paddingTopBot = 20;
+const paddingTop = 20;
 const ScaleBarHeight = 80;
+const xAxisHeight = 20;
 
 class Graph {
     constructor(opts) {
-        var canvas = opts.el;
-        this.series = opts.series;
+        let canvas = opts.el;
+        this.series = opts.series.map(s=> {
+            s.shown = true;
+            s.id = Math.random() + Date.now();
+            return s;
+        });
+        this.xAxisData = opts.xAxis;
         this.drawables = {};
-        this.xRangePercent = opts.defaultXRangePercent || {start: 0, end: 20};
+        this.showLegend = opts.showLegend || true;
+        this.xRangePercent = opts.defaultXRangePercent || {start: 0, end: 30};
         this.sceneObjectGroups = [];
         if (canvas) {
             this.width = parseInt(canvas.width);
@@ -22,45 +30,129 @@ class Graph {
             canvas.height = this.height = opts.height;
             document.body.appendChild(canvas);
         }
+
         this.canvas = canvas;
         this.ctx = canvas.getContext("2d");
         this.pixelPerPercent = this.width / 100;
         this.setupRenderer();
         this.addSceneObjects();
+        if (this.showLegend) {
+            this.initLegend(this.series.map(s=> {
+                return {
+                    name: s.legendName,
+                    color: s.color,
+                    id: s.id
+                }
+            }));
+        }
+    }
+
+    initLegend(series) {
+        let legendContainer = document.createElement('div');
+        Object.assign(legendContainer.style, {
+            overflowX: 'scroll',
+            whiteSpace: 'nowrap',
+            textAlign: 'center',
+            padding: '20px 10px',
+            width: this.width + 'px'
+        })
+        series.forEach((s)=> {
+            legendContainer.appendChild(this.createLegendButton(s));
+        })
+        this.canvas.parentElement.appendChild(legendContainer)
+    }
+
+    createLegendButton(serieInfo) {
+        let butEl = document.createElement('span');
+        Object.assign(butEl.style, {
+            display: 'inline-block',
+            backgroundColor: serieInfo.color,
+            border: `1px solid ${serieInfo.color}`,
+            borderRadius: '10px',
+            minWidth: '80px',
+            padding: '10px',
+            textAlign: 'center',
+            marginRight: '20px',
+            color: 'white'
+        })
+        // let iconEl = document.createElement('i');
+        // iconEl.innerText = 'icon';
+        // butEl.appendChild(iconEl);
+        let text = document.createElement('span');
+        text.innerText = serieInfo.name;
+        butEl.appendChild(text);
+
+        butEl.addEventListener('click', ()=> {
+            let result = this.toggleSerie(serieInfo.id);
+            if (result) {
+                Object.assign(butEl.style, {
+                    backgroundColor: serieInfo.color,
+                    color: 'white'
+                })
+            } else {
+                Object.assign(butEl.style, {
+                    backgroundColor: 'transparent',
+                    color: 'black'
+                })
+            }
+
+        })
+        return butEl;
+    }
+
+    toggleSerie(id) {
+        var serie = this.series.find(s=> s.id == id);
+        serie.shown = !serie.shown;
+        this.drawables.scMain.toggleSerie(id);
+        this.drawables.scUnderScaleBar.toggleSerie(id);
+        this.updateRange(this.xRangePercent, true);
+        return serie.shown;
     }
 
     setupRenderer() {
-        var self = this;
-        var nextFrameHandler = window.requestAnimationFrame ||
+
+        if (this.rendering) return;
+        this.rendering = true
+        const self = this;
+        const nextFrameHandler = window.requestAnimationFrame ||
             window.mozRequestAnimationFrame ||
             window.webkitRequestAnimationFrame ||
             window.msRequestAnimationFrame;
 
+        let staleFrames = 0;
+
         function renderer(tfDiff) {
-            // self.ctx.clearRect(0, 0, self.width, self.height);
-            self.sceneObjectGroups.forEach((group,i)=> {
+            staleFrames++;
+            self.sceneObjectGroups.forEach((group, i)=> {
                 let anyUpdates = false;
                 group.forEach(obj=> {
                     obj.updating(tfDiff) && (anyUpdates = true);
                 });
                 if (anyUpdates) {
+                    staleFrames = 0;
                     self.ctx.clearRect(group[0].rect.x, group[0].rect.y, group[0].rect.width, group[0].rect.height);
                     group.forEach(obj=> {
                         obj.draw(self.ctx);
                     })
                 }
             });
-            nextFrameHandler(renderer);
+            if (staleFrames < 4) {
+                nextFrameHandler(renderer);
+            } else {
+                self.rendering = false
+            }
         }
 
         nextFrameHandler(renderer);
     }
 
-    calcYAxis({serieValues, steps, yPadding}) {
+    calcYAxis({steps, yPadding}) {
         let limits = [];
-        serieValues.forEach(sv=> {
-            limits.push(Math.max.apply(null, sv));
-            limits.push(Math.min.apply(null, sv));
+        this.series.forEach(s=> {
+            if (s.shown) {
+                limits.push(Math.max.apply(null, s.values));
+                limits.push(Math.min.apply(null, s.values));
+            }
         });
         let result = {
             yMax: Math.max.apply(null, limits),
@@ -75,11 +167,26 @@ class Graph {
         return result;
     }
 
-    updateRange({start,end}) {
-        this.xRangePercent.start=start;
-        this.xRangePercent.end=end;
-      //  const yAxisData = this.calcYAxis({serieValues: this.series.map(s=>s.values), steps: 6});
-        this.drawables.scMain.updateRange({rect:this.getSeriesRect()})
+    updateRange({start, end}, updateScaleBar) {
+        this.xRangePercent.start = start;
+        this.xRangePercent.end = end;
+        const yAxisData = this.calcYAxis({steps: 6});
+        const seriesRect = this.getSeriesRect()
+        this.drawables.scMain.updateRange(
+            {
+                rect: seriesRect,
+                yAxisData: yAxisData
+            })
+        if (updateScaleBar) {
+            this.drawables.scUnderScaleBar.updateRange(
+                {
+                    yAxisData: yAxisData
+                })
+        }
+        this.drawables.xAxis.update({x:seriesRect.x,width:seriesRect.width})
+        this.drawables.yAxis.updateValues(yAxisData)
+        this.setupRenderer();
+
     }
 
     getSeriesRect() {
@@ -87,22 +194,31 @@ class Graph {
 
         return {
             x: this.pixelPerPercent * this.xRangePercent.start * scaleFactor * -1,
-            y: paddingTopBot,
+            y: paddingTop,
             width: this.width * scaleFactor,
-            height: this.height - ScaleBarHeight - paddingTopBot * 2,
+            height: this.height - ScaleBarHeight - paddingTop * 2,
         };
     }
 
     addSceneObjects() {
         this.sceneObjectGroups = [];
 
-        const yAxisData = this.calcYAxis({serieValues: this.series.map(s=>s.values), steps: 6});
+        const yAxisData = this.calcYAxis({steps: 6});
 
+
+        let seriesRect = this.getSeriesRect();
         let mainRect = {
             x: 0,
-            y: paddingTopBot,
+            y: paddingTop,
             width: this.width,
-            height: this.height - ScaleBarHeight - paddingTopBot * 2,
+            height: this.height - ScaleBarHeight - paddingTop - xAxisHeight,
+        };
+
+        let xAxisRect = {
+            x: seriesRect.x,
+            y: this.height - ScaleBarHeight - xAxisHeight,
+            width: seriesRect.width,
+            height: xAxisHeight
         };
 
         let scaleBarRect = {
@@ -117,27 +233,33 @@ class Graph {
             data: yAxisData,
             orientation: 'left', //todo
         });
+        this.drawables.xAxis = new XAxisScene({
+            rect: xAxisRect,
+            data: this.xAxisData,
+            ctx:this.ctx
+        });
         this.drawables.scMain = new SeriesContainer({
             yAxisData,
-            rect: this.getSeriesRect(),
+            rect: seriesRect,
             visibleRect: mainRect,
-            series:this.series
+            series: this.series
         });
         this.drawables.scUnderScaleBar = new SeriesContainer({
             yAxisData,
             rect: scaleBarRect,
-            series:this.series
+            series: this.series
         });
         this.drawables.sb = new ScaleBar({
             bg: 'rgba(225,225,225,0.5)',
             rect: scaleBarRect,
             range: this.xRangePercent,
-            onRangeChange:this.updateRange.bind(this),
-            canvas:this.canvas
+            onRangeChange: this.updateRange.bind(this),
+            canvas: this.canvas
         });
 
 
         this.sceneObjectGroups.push([this.drawables.yAxis, this.drawables.scMain]);
+        this.sceneObjectGroups.push([this.drawables.xAxis]);
         this.sceneObjectGroups.push([this.drawables.scUnderScaleBar, this.drawables.sb]);
 
     }

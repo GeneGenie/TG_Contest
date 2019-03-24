@@ -15,14 +15,33 @@ class YAxisScene {
         this.lineWidth = opts.lineWidth || 0.3;
         this.fontColor = opts.fontColor || 'black';
         this.fontSize = opts.fontSize || 14;
+        this.labelFormatFn = opts.labelFormatFn || this.labelFormatFnDefault;
 
         this.calculate();
+    }
+    updateValues(data){
+        this.data=data;
+        this.calculate();
+        this.drawn = false;
+    }
+    labelFormatFnDefault(value) {
+        value = parseInt(value)
+        if (value / 1e9 >= 1) {
+            value = (value / 1e9).toFixed(2) + 'b'
+        } else if (value / 1e6 >= 1) {
+            value = (value / 1e6).toFixed(2) + 'm'
+        } else if (value / 1e3 >= 1) {
+            value = (value / 1e3).toFixed(2) + 'k'
+        }
+        return value
     }
 
     calculate() {
         //top to bottom
         let startY = this.rect.y;
         let yPixelStep = this.rect.height / (this.data.labels.length - 1);
+        this.labels = [];
+        this.lines = [];
         this.data.labels.forEach(lbl=> {
 
             this.labels.push({
@@ -61,10 +80,11 @@ class YAxisScene {
         this.lines.forEach(line=>line.draw(ctx));
         this.labels.forEach((lbl, i)=> {
             ctx.font = `${lbl.fontSize}px Arial`;
+            ctx.textAlign = 'left';
             ctx.fillStyle = lbl.fontColor;
 
             let y = i == 0 ? lbl.y + lbl.fontSize + this.padding : lbl.y;
-            ctx.fillText(lbl.text, lbl.x, y)
+            ctx.fillText(this.labelFormatFnDefault(lbl.text), lbl.x, y)
         })
         this.drawn = true;
     }

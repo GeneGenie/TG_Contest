@@ -3,7 +3,7 @@ class Utils {
     }
 
     static newDeferred() {
-        var resolve, reject;
+        let resolve, reject;
         let promise = new Promise((res, rej)=> {
             resolve = res;
             reject = rej;
@@ -16,7 +16,7 @@ class Utils {
     }
 
     static keyByValue(obj, value) {
-        for (var key in obj) {
+        for (let key in obj) {
             if (obj[key] === value) {
                 return key;
             }

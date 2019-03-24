@@ -3,7 +3,7 @@ class SeriesContainer {
     constructor(opts) {
         this.rect = opts.rect;
         this.visibleRect = opts.visibleRect || this.rect;
-        this.series = opts.series.map(ser => Object.assign({},ser));
+        this.series = opts.series.map(ser => Object.assign({}, ser));
         this.yAxisData = opts.yAxisData
         this.drawables = []
 
@@ -11,7 +11,7 @@ class SeriesContainer {
             if (ser.type == 'line') {
                 let points = this.calculate({
                     yAxis: this.yAxisData,
-                    values:ser.values,
+                    values: ser.values,
                     rect: this.rect,
                 });
 
@@ -25,19 +25,40 @@ class SeriesContainer {
             }
         })
     }
-    updateRange({rect}){
-        this.rect = rect;
+
+    toggleSerie(id) {
+        var ser = this.series.find(s=> s.id == id);
+        ser.shown = !ser.shown;
+        if (!ser.shown) {
+            ser.drawableLine.animate({
+                points: ser.drawableLine.points.map(p=> {
+                    return [p[0], this.rect.y]
+                }),
+                opacity:0
+            });
+        }
+
+        //serie.drawableLine.drawn = false;
+
+    }
+
+    updateRange({rect, yAxisData}) {
+        if (rect) {
+            this.rect = rect;
+        }
+        this.yAxisData = yAxisData;
         this.series.forEach(ser=> {
-            if (ser.type == 'line') {
+            if (ser.type == 'line' && ser.shown) {
                 let points = this.calculate({
                     yAxis: this.yAxisData,
-                    values:ser.values,
+                    values: ser.values,
                     rect: this.rect,
                 });
                 ser.drawableLine.animate({points});
             }
         })
     }
+
     calculate({values, rect, yAxis}) {
         let {yMax, yMin} = yAxis;
         let xStep = rect.width / (values.length - 1);
@@ -53,7 +74,8 @@ class SeriesContainer {
 
     updating(TIME) {
         let anyUpdates = false;
-        this.drawables.forEach(d=> {
+        this.series.forEach(s=> {
+            let d = s.drawableLine;
             let res = d.updating(TIME)
             if (!anyUpdates) {
                 anyUpdates = res;
@@ -64,8 +86,11 @@ class SeriesContainer {
     }
 
     draw(ctx) {
-        this.drawables.forEach(d=> {
+        this.series.forEach(s=> {
+            if (s.shown || s.drawableLine.animating) {
+            let d = s.drawableLine
             d.draw(ctx)
+            }
         })
 
     }

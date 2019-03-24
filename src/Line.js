@@ -7,6 +7,7 @@ class Line {
         this.animating = false;
         this.points = opts.points;
         this.color = opts.color;
+        this.opacity=1;
         this.lineWidth = opts.lineWidth || 2;
     }
 
@@ -19,12 +20,14 @@ class Line {
         ctx.beginPath();
         ctx.strokeStyle = this.color;
         ctx.lineWidth = this.lineWidth;
+        ctx.globalAlpha = this.opacity;
         this.points.forEach((point, i)=> {
             ctx.moveTo.apply(ctx, point);
             ctx.lineTo.apply(ctx, this.points[i + 1] || point);
         });
 
         ctx.stroke();
+        //ctx.globalAlpha=1;
         this.drawn = true;
         return this;
     }
@@ -37,10 +40,12 @@ class Line {
         }
         this.animOpts = {
             orig: {
-                points: this.points.map(v=>v)
+                points: this.points.map(v=>v),
+                opacity: this.opacity
             },
             dir: {
                 points: this.points.map((point, i)=>Utils.subAA(opts.points[i], point)),
+                opacity:(opts.opacity===undefined? 1:opts.opacity) - this.opacity,
             },
             duration: opts.duration || DEFAULT_ANIMATION_DURATION,
             progress: null,
@@ -66,6 +71,10 @@ class Line {
         opts.progress = ((TIME - opts.start) / opts.duration);
         if (opts.progress > 1) {
             opts.progress = 1;
+        }
+        if (opts.dir.opacity != 0) {
+            console.log(this.opacity)
+            this.opacity = opts.orig.opacity+ opts.dir.opacity * opts.progress;
         }
         this.points = opts.orig.points.map((orpoint, i)=> {
             return Utils.addAA(orpoint, Utils.multiAV(opts.dir.points[i], opts.progress));

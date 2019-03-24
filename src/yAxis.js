@@ -13,7 +13,7 @@ class YAxisScene {
         this.padding = opts.padding || 5;
         this.lineColor = opts.lineColor || 'grey';
         this.lineWidth = opts.lineWidth || 0.3;
-        this.fontColor = opts.fontColor || 'black';
+        this.fontColor = opts.fontColor || 'grey';
         this.fontSize = opts.fontSize || 14;
         this.labelFormatFn = opts.labelFormatFn || this.labelFormatFnDefault;
 

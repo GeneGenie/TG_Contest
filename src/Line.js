@@ -73,7 +73,6 @@ class Line {
             opts.progress = 1;
         }
         if (opts.dir.opacity != 0) {
-            console.log(this.opacity)
             this.opacity = opts.orig.opacity+ opts.dir.opacity * opts.progress;
         }
         this.points = opts.orig.points.map((orpoint, i)=> {

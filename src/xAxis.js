@@ -59,7 +59,7 @@ class XAxisScene {
         const r = this.rect
         // ctx.fillStyle = 'red';
         //ctx.fillRect(r.x, r.y, r.width, r.height)
-        ctx.fillStyle = 'black'
+        ctx.fillStyle = 'grey'
         ctx.font = '14px Arial'
 
         let takenX = this.labels[0].x;

@@ -1,5 +1,6 @@
 import YAxisScene from "./yAxis.js";
 import XAxisScene from "./xAxis.js";
+import Legend from "./Legend.js";
 import ScaleBar from "./ScaleBar.js";
 import SeriesContainer from "./SeriesContainer.js";
 
@@ -37,67 +38,19 @@ class Graph {
         this.setupRenderer();
         this.addSceneObjects();
         if (this.showLegend) {
-            this.initLegend(this.series.map(s=> {
-                return {
-                    name: s.legendName,
-                    color: s.color,
-                    id: s.id
-                }
-            }));
+
+            new Legend({
+                series: this.series.map(s=> {
+                    return {
+                        name: s.legendName,
+                        color: s.color,
+                        id: s.id
+                    }
+                }),
+                canvas: canvas,
+                onClickSerie: this.toggleSerie.bind(this)
+            })
         }
-    }
-
-    initLegend(series) {
-        let legendContainer = document.createElement('div');
-        Object.assign(legendContainer.style, {
-            overflowX: 'scroll',
-            whiteSpace: 'nowrap',
-            textAlign: 'center',
-            padding: '20px 10px',
-            width: this.width + 'px'
-        })
-        series.forEach((s)=> {
-            legendContainer.appendChild(this.createLegendButton(s));
-        })
-        this.canvas.parentElement.appendChild(legendContainer)
-    }
-
-    createLegendButton(serieInfo) {
-        let butEl = document.createElement('span');
-        Object.assign(butEl.style, {
-            display: 'inline-block',
-            backgroundColor: serieInfo.color,
-            border: `1px solid ${serieInfo.color}`,
-            borderRadius: '10px',
-            minWidth: '80px',
-            padding: '10px',
-            textAlign: 'center',
-            marginRight: '20px',
-            color: 'white'
-        })
-        // let iconEl = document.createElement('i');
-        // iconEl.innerText = 'icon';
-        // butEl.appendChild(iconEl);
-        let text = document.createElement('span');
-        text.innerText = serieInfo.name;
-        butEl.appendChild(text);
-
-        butEl.addEventListener('click', ()=> {
-            let result = this.toggleSerie(serieInfo.id);
-            if (result) {
-                Object.assign(butEl.style, {
-                    backgroundColor: serieInfo.color,
-                    color: 'white'
-                })
-            } else {
-                Object.assign(butEl.style, {
-                    backgroundColor: 'transparent',
-                    color: 'black'
-                })
-            }
-
-        })
-        return butEl;
     }
 
     toggleSerie(id) {
@@ -146,12 +99,24 @@ class Graph {
         nextFrameHandler(renderer);
     }
 
-    calcYAxis({steps, yPadding}) {
+    calcYAxis({steps, yPadding, indexRange}) {
         let limits = [];
+        let count = this.series[0].values.length;
+        let iRange
+        if (indexRange) {
+            let start =  Math.floor((count - 1) / 100 * this.xRangePercent.start);
+            if(start<0) start = 0;
+            iRange = {
+                start: start,
+                end: Math.ceil((count - 1) / 100 * this.xRangePercent.end),
+            }
+        } else {
+            iRange = {start: 0, end: count - 1};
+        }
         this.series.forEach(s=> {
             if (s.shown) {
-                limits.push(Math.max.apply(null, s.values));
-                limits.push(Math.min.apply(null, s.values));
+                limits.push(Math.max.apply(null, s.values.slice(iRange.start, iRange.end)));
+                limits.push(Math.min.apply(null, s.values.slice(iRange.start, iRange.end)));
             }
         });
         let result = {
@@ -170,21 +135,21 @@ class Graph {
     updateRange({start, end}, updateScaleBar) {
         this.xRangePercent.start = start;
         this.xRangePercent.end = end;
-        const yAxisData = this.calcYAxis({steps: 6});
         const seriesRect = this.getSeriesRect()
+        const yData = this.calcYAxis({steps: 6, indexRange: true});
         this.drawables.scMain.updateRange(
             {
                 rect: seriesRect,
-                yAxisData: yAxisData
+                yAxisData: yData
             })
         if (updateScaleBar) {
             this.drawables.scUnderScaleBar.updateRange(
                 {
-                    yAxisData: yAxisData
+                    yAxisData: this.calcYAxis({steps: 6})
                 })
         }
-        this.drawables.xAxis.update({x:seriesRect.x,width:seriesRect.width})
-        this.drawables.yAxis.updateValues(yAxisData)
+        this.drawables.xAxis.update({x: seriesRect.x, width: seriesRect.width})
+        this.drawables.yAxis.updateValues(yData)
         this.setupRenderer();
 
     }
@@ -202,10 +167,7 @@ class Graph {
 
     addSceneObjects() {
         this.sceneObjectGroups = [];
-
-        const yAxisData = this.calcYAxis({steps: 6});
-
-
+        const yAxisData = this.calcYAxis({steps: 6, indexRange: true});
         let seriesRect = this.getSeriesRect();
         let mainRect = {
             x: 0,
@@ -236,7 +198,7 @@ class Graph {
         this.drawables.xAxis = new XAxisScene({
             rect: xAxisRect,
             data: this.xAxisData,
-            ctx:this.ctx
+            ctx: this.ctx
         });
         this.drawables.scMain = new SeriesContainer({
             yAxisData,
@@ -245,7 +207,7 @@ class Graph {
             series: this.series
         });
         this.drawables.scUnderScaleBar = new SeriesContainer({
-            yAxisData,
+            yAxisData: this.calcYAxis({steps: 6}),
             rect: scaleBarRect,
             series: this.series
         });
@@ -279,7 +241,7 @@ class Graph {
         //xAxis.values = xAxis.values.map(v=> new Date(v).toLocaleString('en-us', {day: '2-digit', month: 'short'}))
         delete series['x'];
         return new Graph({
-            width: 360,//window.innerWidth,
+            width: window.innerWidth,
             height: 400,
             xAxis,
             series: Object.values(series)

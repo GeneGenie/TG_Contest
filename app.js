@@ -5,7 +5,7 @@ function getData() {
         .then(s=>s.json())
         .then(data=> {
             let CS = new ColorShifter()
-            window.g = Graph.initFromData(data[0]);
+            window.g = Graph.initFromData(data[4]);
             //minify webpack
             // tooltips ? fuck
         })

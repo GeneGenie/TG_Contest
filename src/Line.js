@@ -27,7 +27,7 @@ class Line {
         });
 
         ctx.stroke();
-        //ctx.globalAlpha=1;
+        ctx.globalAlpha=1;
         this.drawn = true;
         return this;
     }

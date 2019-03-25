@@ -47,12 +47,24 @@ class HitRect {
         this.canvas.addEventListener('touchend', (e)=> {
             this.canvas.removeEventListener('touchmove', moveHandler)
         })
+        this.canvasOffset = {
+            x: this.canvas.offsetLeft,
+            y: this.canvas.offsetTop
+        }
 
     }
 
+    getRelativeTouchX(e) {
+        return (e.touches[0].pageX - this.canvasOffset.x)
+    }
+
+    getRelativeTouchY(e) {
+        return (e.touches[0].pageY - this.canvasOffset.y)
+    }
+
     move(e) {
-        let eX = e.layerX || e.offsetX,
-            eY = e.layerY || e.offsetY,
+        let eX = e.layerX || e.offsetX || this.getRelativeTouchX(e),
+            eY = e.layerY || e.offsetY || this.getRelativeTouchY(e),
             xDiff = eX - this.sX;
 
         this.rect.x += xDiff;
@@ -66,8 +78,8 @@ class HitRect {
 
     isHit(e) {
         let r = this.rect,
-            eX = e.layerX || e.offsetX,
-            eY = e.layerY || e.offsetY,
+            eX = e.layerX || e.offsetX || this.getRelativeTouchX(e),
+            eY = e.layerY || e.offsetY || this.getRelativeTouchY(e),
             hitX = r.x < eX && eX < r.x + r.width,
             hitY = r.y < eY && eY < r.y + r.height;
 

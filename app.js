@@ -7,7 +7,7 @@ function getData() {
             let CS = new ColorShifter()
 
 
-            data.forEach(dataSet=>{
+            data.reverse().forEach(dataSet=>{
                 Graph.initFromData(dataSet)
             })
             //minify webpack
